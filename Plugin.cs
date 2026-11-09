@@ -31,7 +31,7 @@ public class Plugin : BaseUnityPlugin
         Instance = this;
         Logger = base.Logger;
         harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
-        customFlagManager = new(Instance, "https://github.com/SierraFrey/NineSolsAPI-SaveUtils-ExampleMod/tree/main"); // Constructor requires the instance of the plugin.
+        customFlagManager = new(Instance, "https://github.com/SierraFrey/NineSolsAPI-CustomFlagManager-ExampleMod"); // Constructor requires the instance of the plugin.
         // Optionally, you can include the mod's download URL so that it will be saved in a save file's metadata.
         allScenes = new();
 
