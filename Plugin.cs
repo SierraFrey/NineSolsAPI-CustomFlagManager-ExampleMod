@@ -6,7 +6,6 @@ using BepInEx.Logging;
 using HarmonyLib;
 using UnityEngine.SceneManagement;
 using NineSolsAPI;
-using NineSolsAPI.Utils;
 
 namespace save_example;
 
@@ -16,12 +15,13 @@ namespace save_example;
 public class Plugin : BaseUnityPlugin
 {
     internal static Plugin Instance = null!;
-    internal static new ManualLogSource Logger;
+    internal new ManualLogSource Logger;
     private Harmony harmony = null!;
+    internal CustomFlagManager customFlagManager = null!;
 
-    internal static Dictionary<string, FlagsInSpecificScene> allScenes = null!;
-    internal static GameFlagInt jumpCount = null!;
-    internal static GameFlagInt killCount = null!;
+    internal Dictionary<string, FlagsInSpecificScene> allScenes = null!;
+    internal GameFlagInt jumpCount = null!;
+    internal GameFlagInt killCount = null!;
     private void OnDestroy()
     {
         harmony.UnpatchSelf();
@@ -31,32 +31,33 @@ public class Plugin : BaseUnityPlugin
         Instance = this;
         Logger = base.Logger;
         harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
-
+        customFlagManager = new(Instance, "https://github.com/SierraFrey/NineSolsAPI-SaveUtils-ExampleMod/tree/main"); // Constructor requires the instance of the plugin.
+        // Optionally, you can include the mod's download URL so that it will be saved in a save file's metadata.
         allScenes = new();
+
         try
         {
-            SaveUtils.SetURL(Instance, "https://github.com/SierraFrey/NineSolsAPI-SaveUtils-ExampleMod/tree/main");
             /*
             Calling these methods allows the API to do most of the work for you by:
             Creating its field
             Setting a default value
             Setting an ID
-            Adding it to the SaveManager's flag dictionary
+            Adding it to the game's SaveManager flag dictionary
 
             Make sure that every name is unique!
             */
-
-            jumpCount = SaveUtils.CreateGameFlagInt(Instance, "jumpCount", 0);
-            killCount = SaveUtils.CreateGameFlagInt(Instance, "killCount", 0);
+            
+            jumpCount = customFlagManager.CreateGameFlagInt("jumpCount", 0);
+            killCount = customFlagManager.CreateGameFlagInt("killCount", 0);
 
             /*
-            The following 4 flag types can be created with SaveUtils:
+            The following 4 flag types can be created with CustomFlagManager:
             ScriptableDataBool - Bool
             GameFlagInt - Int
             ScriptableDataFloat - Float
             GameFlagString - String
 
-            If you want to save something more complicated, you can create classes that use the SaveUtils methods in its constructor.
+            If you want to save something more complicated, you can create classes that use the CustomFlagManager methods in its constructor.
             */
             for (int i = 0; i < SceneManager.sceneCountInBuildSettings; i++)
             {
@@ -74,10 +75,11 @@ public class Plugin : BaseUnityPlugin
     
     public class FlagsInSpecificScene
     {
+        private static CustomFlagManager customFlagManager => Plugin.Instance.customFlagManager;
         public FlagsInSpecificScene(string name)
         {
-            breakablesDestroyed = SaveUtils.CreateGameFlagInt(Instance, $"{name}.breakablesDestroyed", 0);
-            timesEntered = SaveUtils.CreateGameFlagInt(Instance, $"{name}.timesEntered", 0);
+            breakablesDestroyed = customFlagManager.CreateGameFlagInt($"{name}.breakablesDestroyed", 0);
+            timesEntered = customFlagManager.CreateGameFlagInt($"{name}.timesEntered", 0);
         }
         public GameFlagInt breakablesDestroyed;
         public GameFlagInt timesEntered;
@@ -87,20 +89,22 @@ public class Plugin : BaseUnityPlugin
 [HarmonyPatch]
 public class Patches
 {
+    private static Plugin Instance => Plugin.Instance;
+
     [HarmonyPatch(typeof(Player), nameof(Player.MechanicalJump))]
     [HarmonyPostfix]
     private static void MechanicalJump()
     {
-        Plugin.jumpCount.CurrentValue++;
-        ToastManager.Toast($"Jumps: {Plugin.jumpCount.CurrentValue}");
+        Instance.jumpCount.CurrentValue++;
+        ToastManager.Toast($"Jumps: {Instance.jumpCount.CurrentValue}");
     }
 
     [HarmonyPatch(typeof(MonsterBase), nameof(MonsterBase.Die))]
     [HarmonyPostfix]
     private static void Die()
     {
-        Plugin.killCount.CurrentValue++;
-        ToastManager.Toast($"Kills: {Plugin.killCount.CurrentValue}");
+        Instance.killCount.CurrentValue++;
+        ToastManager.Toast($"Kills: {Instance.killCount.CurrentValue}");
     }
 
     [HarmonyPatch(typeof(DebrisBreakable), nameof(DebrisBreakable.Break))]
@@ -108,7 +112,7 @@ public class Patches
     private static void Break()
     {
         string sceneName = SceneManager.GetActiveScene().name;
-        GameFlagInt flag = Plugin.allScenes[sceneName].breakablesDestroyed;
+        GameFlagInt flag = Instance.allScenes[sceneName].breakablesDestroyed;
         flag.CurrentValue++;
         ToastManager.Toast($"Breakables destroyed in this scene: {flag.CurrentValue}");
     }
@@ -117,9 +121,9 @@ public class Patches
     [HarmonyPostfix]
     private static void Awake(GameLevel __instance)
     {
-        if (!Plugin.allScenes.ContainsKey(__instance.SceneName))
+        if (!Instance.allScenes.ContainsKey(__instance.SceneName))
             return;
-        GameFlagInt flag = Plugin.allScenes[__instance.SceneName].timesEntered;
+        GameFlagInt flag = Instance.allScenes[__instance.SceneName].timesEntered;
         flag.CurrentValue++;
         ToastManager.Toast($"Times you entered this scene ({__instance.SceneName}): {flag.CurrentValue}");
     }
