@@ -30,13 +30,13 @@ public class Plugin : BaseUnityPlugin
     {
         Instance = this;
         Logger = base.Logger;
-        harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
-        customFlagManager = new(Instance, true, "https://github.com/SierraFrey/NineSolsAPI-CustomFlagManager-ExampleMod"); // Constructor requires the instance of the plugin.
-        // Optionally, you can include the mod's download URL so that it will be saved in a save file's metadata.
-        allScenes = new();
 
         try
         {
+            harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
+            customFlagManager = new(Instance, true, "https://github.com/SierraFrey/NineSolsAPI-CustomFlagManager-ExampleMod"); // Constructor requires the instance of the plugin.
+            // Optionally, you can include the mod's download URL so that it will be saved in a save file's metadata.
+            allScenes = new();
             /*
             Calling these methods allows the API to do most of the work for you by:
             Creating its field
@@ -46,7 +46,7 @@ public class Plugin : BaseUnityPlugin
 
             Make sure that every name is unique!
             */
-            
+
             jumpCount = customFlagManager.CreateGameFlagInt("jumpCount", 0);
             killCount = customFlagManager.CreateGameFlagInt("killCount", 0);
 
@@ -72,7 +72,7 @@ public class Plugin : BaseUnityPlugin
         }
         Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
     }
-    
+
     public class FlagsInSpecificScene
     {
         private static CustomFlagManager customFlagManager => Plugin.Instance.customFlagManager;
@@ -128,5 +128,3 @@ public class Patches
         ToastManager.Toast($"Times you entered this scene ({__instance.SceneName}): {flag.CurrentValue}");
     }
 }
-
-
